@@ -72,6 +72,8 @@ if(SFML_OS_SDL3)
         ${SRCROOT}/SDL3/SensorImpl.cpp
         ${SRCROOT}/SDL3/VideoModeImpl.cpp
         ${SRCROOT}/SDL3/VulkanImpl.cpp
+        ${SRCROOT}/SDL3/Utils.hpp
+        ${SRCROOT}/SDL3/Utils.cpp
     )
     source_group("sdl3" FILES ${PLATFORM_SRC})
 elseif(SFML_OS_WINDOWS)

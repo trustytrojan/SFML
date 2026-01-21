@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2025 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2026 trustytrojan (t@trustytrojan.dev)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -26,6 +26,7 @@
 // Headers
 ////////////////////////////////////////////////////////////
 #include <SFML/Window/SDL3/ClipboardImpl.hpp>
+#include <SFML/Window/SDL3/Utils.hpp>
 
 #include <SDL3/SDL.h>
 
@@ -36,6 +37,7 @@ namespace sf::priv
 ////////////////////////////////////////////////////////////
 String ClipboardImpl::getString()
 {
+    ensureSdlVideoInit();
     char* text = SDL_GetClipboardText();
     if (text)
     {
@@ -50,6 +52,7 @@ String ClipboardImpl::getString()
 ////////////////////////////////////////////////////////////
 void ClipboardImpl::setString(const String& text)
 {
+    ensureSdlVideoInit();
     U8String utf8 = text.toUtf8();
     SDL_SetClipboardText(reinterpret_cast<const char*>(utf8.c_str()));
 }

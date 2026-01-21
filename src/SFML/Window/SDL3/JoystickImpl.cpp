@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2025 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2026 trustytrojan (t@trustytrojan.dev)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -141,7 +141,7 @@ JoystickState JoystickImpl::update()
         int axisCount = SDL_GetNumJoystickAxes(m_joystick);
         for (int i = 0; i < axisCount && i < static_cast<int>(Joystick::AxisCount); ++i)
         {
-            float value                                = static_cast<float>(SDL_GetJoystickAxis(m_joystick, i));
+            auto value                                 = static_cast<float>(SDL_GetJoystickAxis(m_joystick, i));
             state.axes[static_cast<Joystick::Axis>(i)] = (value / 32767.f) * 100.f;
         }
     }

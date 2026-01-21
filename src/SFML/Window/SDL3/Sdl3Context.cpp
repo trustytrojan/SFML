@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2025 Laurent Gomila (laurent@sfml-dev.org)
+// Copyright (C) 2026 trustytrojan (t@trustytrojan.dev)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -33,11 +33,48 @@
 #include <ostream>
 
 
+namespace
+{
+void updateSettings(sf::ContextSettings& settings)
+{
+    int value = 0;
+    SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &value);
+    settings.depthBits = static_cast<unsigned int>(value);
+
+    SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &value);
+    settings.stencilBits = static_cast<unsigned int>(value);
+
+    SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &value);
+    settings.antiAliasingLevel = static_cast<unsigned int>(value);
+
+    SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &value);
+    settings.majorVersion = static_cast<unsigned int>(value);
+
+    SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &value);
+    settings.minorVersion = static_cast<unsigned int>(value);
+
+    int flags = 0;
+    SDL_GL_GetAttribute(SDL_GL_CONTEXT_FLAGS, &flags);
+    settings.attributeFlags = sf::ContextSettings::Attribute::Default;
+    if (flags & SDL_GL_CONTEXT_DEBUG_FLAG)
+        settings.attributeFlags |= sf::ContextSettings::Attribute::Debug;
+
+    int profile = 0;
+    SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, &profile);
+    if (profile & SDL_GL_CONTEXT_PROFILE_CORE)
+        settings.attributeFlags |= sf::ContextSettings::Attribute::Core;
+}
+} // namespace
+
+
 namespace sf::priv
 {
 ////////////////////////////////////////////////////////////
 Sdl3Context::Sdl3Context(Sdl3Context* shared)
 {
+    if (shared)
+        SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
+
     // Create a hidden window for the context
     m_window = SDL_CreateWindow("", 1, 1, SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL);
     if (!m_window)
@@ -47,10 +84,8 @@ Sdl3Context::Sdl3Context(Sdl3Context* shared)
     }
     m_ownsWindow = true;
 
-    if (shared)
-        SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
-
     m_context = SDL_GL_CreateContext(m_window);
+    updateSettings(m_settings);
 }
 
 
@@ -65,30 +100,46 @@ Sdl3Context::Sdl3Context(Sdl3Context* shared, const ContextSettings& settings, c
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, static_cast<int>(settings.stencilBits));
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, settings.antiAliasingLevel > 0 ? 1 : 0);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, static_cast<int>(settings.antiAliasingLevel));
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, static_cast<int>(settings.majorVersion));
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, static_cast<int>(settings.minorVersion));
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                        (settings.attributeFlags & ContextSettings::Core) ? SDL_GL_CONTEXT_PROFILE_CORE
+                                                                          : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,
+                        (settings.attributeFlags & ContextSettings::Debug) ? SDL_GL_CONTEXT_DEBUG_FLAG : 0);
 
     if (shared)
         SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 
     m_context = SDL_GL_CreateContext(m_window);
+    updateSettings(m_settings);
 }
 
 
 ////////////////////////////////////////////////////////////
 Sdl3Context::Sdl3Context(Sdl3Context* shared, const ContextSettings& settings, Vector2u size)
 {
-    m_window = SDL_CreateWindow("", static_cast<int>(size.x), static_cast<int>(size.y), SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL);
-    m_ownsWindow = true;
-
-    // Apply settings
+    // Apply settings BEFORE window creation for OpenGL windows
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, static_cast<int>(settings.depthBits));
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, static_cast<int>(settings.stencilBits));
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, settings.antiAliasingLevel > 0 ? 1 : 0);
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, static_cast<int>(settings.antiAliasingLevel));
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, static_cast<int>(settings.majorVersion));
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, static_cast<int>(settings.minorVersion));
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+                        (settings.attributeFlags & ContextSettings::Core) ? SDL_GL_CONTEXT_PROFILE_CORE
+                                                                          : SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS,
+                        (settings.attributeFlags & ContextSettings::Debug) ? SDL_GL_CONTEXT_DEBUG_FLAG : 0);
+
+    m_window = SDL_CreateWindow("", static_cast<int>(size.x), static_cast<int>(size.y), SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL);
+    m_ownsWindow = true;
 
     if (shared)
         SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
 
     m_context = SDL_GL_CreateContext(m_window);
+    updateSettings(m_settings);
 }
 
 
@@ -115,8 +166,8 @@ bool Sdl3Context::makeCurrent(bool current)
 {
     if (current)
         return SDL_GL_MakeCurrent(m_window, m_context);
-    else
-        return SDL_GL_MakeCurrent(m_window, nullptr);
+
+    return SDL_GL_MakeCurrent(m_window, nullptr);
 }
 
 

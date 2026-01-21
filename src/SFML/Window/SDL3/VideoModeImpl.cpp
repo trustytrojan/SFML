@@ -1,7 +1,6 @@
 #include <SFML/Window/VideoModeImpl.hpp>
 
 #include <SDL3/SDL.h>
-#include <algorithm>
 
 namespace sf::priv
 {
