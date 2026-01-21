@@ -2,6 +2,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <SystemUtil.hpp>
+#include <memory>
 #include <string_view>
 #include <type_traits>
 
@@ -9,17 +11,22 @@ namespace
 {
 struct
 {
-    std::string_view operator()(const sf::Event::Closed&) const
+    std::string_view operator()(sf::Event::Closed&) const
     {
-        return "Closed";
+        return "Closed (non-const)";
     }
 
-    std::string_view operator()(const sf::Event::Resized&) const
+    std::string_view operator()(const sf::Event::Closed&) const
+    {
+        return "Closed (const)";
+    }
+
+    std::string_view operator()(sf::Event::Resized&) const
     {
         return "Resized";
     }
 
-    std::string_view operator()(const sf::Event::KeyPressed&) const
+    std::string_view operator()(sf::Event::KeyPressed) const
     {
         return "KeyPressed";
     }
@@ -37,10 +44,10 @@ TEST_CASE("[Window] sf::Event")
     SECTION("Type traits")
     {
         STATIC_CHECK(!std::is_default_constructible_v<sf::Event>);
-        STATIC_CHECK(std::is_copy_constructible_v<sf::Event>);
-        STATIC_CHECK(std::is_copy_assignable_v<sf::Event>);
-        STATIC_CHECK(std::is_nothrow_move_constructible_v<sf::Event>);
-        STATIC_CHECK(std::is_nothrow_move_assignable_v<sf::Event>);
+        STATIC_CHECK(std::is_trivially_copy_constructible_v<sf::Event>);
+        STATIC_CHECK(std::is_trivially_copy_assignable_v<sf::Event>);
+        STATIC_CHECK(std::is_trivially_move_constructible_v<sf::Event>);
+        STATIC_CHECK(std::is_trivially_move_assignable_v<sf::Event>);
     }
 
     SECTION("Construction")
@@ -295,12 +302,54 @@ TEST_CASE("[Window] sf::Event")
         CHECK(sensorChanged.value == sf::Vector3f());
     }
 
+    SECTION("getIf()")
+    {
+        sf::Event event      = sf::Event::MouseMoved{{4, 2}};
+        auto*     mouseMoved = event.getIf<sf::Event::MouseMoved>();
+        REQUIRE(mouseMoved);
+        mouseMoved->position = sf::Vector2i(6, 9);
+        CHECK(mouseMoved->position == sf::Vector2i(6, 9));
+    }
+
     SECTION("visit()")
     {
-        CHECK(sf::Event(sf::Event::Closed{}).visit(visitor) == "Closed");
-        CHECK(sf::Event(sf::Event::Resized{}).visit(visitor) == "Resized");
-        CHECK(sf::Event(sf::Event::FocusLost{}).visit(visitor) == "Other");
-        CHECK(sf::Event(sf::Event::FocusGained{}).visit(visitor) == "Other");
-        CHECK(sf::Event(sf::Event::KeyPressed{}).visit(visitor) == "KeyPressed");
+        SECTION("Non-const")
+        {
+            sf::Event closed = sf::Event::Closed{};
+            CHECK(closed.visit(visitor) == "Closed (non-const)");
+
+            sf::Event resized = sf::Event::Resized{};
+            CHECK(resized.visit(visitor) == "Resized");
+
+            sf::Event keyPressed = sf::Event::KeyPressed{};
+            CHECK(keyPressed.visit(visitor) == "KeyPressed");
+
+            sf::Event focusLost = sf::Event::FocusLost{};
+            CHECK(focusLost.visit(visitor) == "Other");
+        }
+
+        SECTION("Const")
+        {
+            const sf::Event closed = sf::Event::Closed{};
+            CHECK(closed.visit(visitor) == "Closed (const)");
+
+            const sf::Event resized = sf::Event::Resized{};
+            CHECK(resized.visit(visitor) == "Other"); // Cannot use non-const reference callback
+
+            const sf::Event keyPressed = sf::Event::KeyPressed{};
+            CHECK(keyPressed.visit(visitor) == "KeyPressed");
+
+            const sf::Event focusLost = sf::Event::FocusLost{};
+            CHECK(focusLost.visit(visitor) == "Other");
+        }
+
+        SECTION("Move-only visitor")
+        {
+            // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
+            auto moveOnlyVisitor = [ptr = std::make_unique<std::string_view>("It works")](const auto&) { return *ptr; };
+
+            const sf::Event closed = sf::Event::Closed{};
+            CHECK(closed.visit(moveOnlyVisitor) == "It works");
+        }
     }
 }

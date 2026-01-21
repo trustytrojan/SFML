@@ -238,7 +238,7 @@ macro(sfml_add_library module)
             FRAMEWORK DESTINATION "." COMPONENT bin)
 
     # install pkgconfig
-    if(SFML_INSTALL_PKGCONFIG_FILES)
+    if(SFML_INSTALL_PKGCONFIG_FILES AND NOT ${target} STREQUAL "sfml-main")
         configure_file(
             "${PROJECT_SOURCE_DIR}/tools/pkg-config/${target}.pc.in"
             "${CMAKE_CURRENT_BINARY_DIR}/tools/pkg-config/${target}.pc"
@@ -286,18 +286,21 @@ macro(sfml_add_library module)
         target_compile_definitions(${target} PUBLIC "SFML_STATIC")
     endif()
 
+    # Enable support for UTF-8 characters in source code
+    if(SFML_COMPILER_MSVC)
+        target_compile_options(${target} PRIVATE /utf-8)
+    endif()
 endmacro()
 
 # add a new target which is a SFML example
 # example: sfml_add_example(ftp
 #                           SOURCES ftp.cpp ...
 #                           BUNDLE_RESOURCES MainMenu.nib ...    # Files to be added in target but not installed next to the executable
-#                           DEPENDS SFML::Network
-#                           RESOURCES_DIR resources)             # A directory to install next to the executable and sources
+#                           DEPENDS SFML::Network)
 macro(sfml_add_example target)
 
     # parse the arguments
-    cmake_parse_arguments(THIS "GUI_APP" "RESOURCES_DIR" "SOURCES;BUNDLE_RESOURCES;DEPENDS" ${ARGN})
+    cmake_parse_arguments(THIS "GUI_APP" "" "SOURCES;BUNDLE_RESOURCES;DEPENDS" ${ARGN})
 
     # set a source group for the source files
     source_group("" FILES ${THIS_SOURCES})
@@ -348,8 +351,12 @@ macro(sfml_add_example target)
     # set the target flags to use the appropriate C++ standard library
     sfml_set_stdlib(${target})
 
-    # set the Visual Studio startup path for debugging
-    set_target_properties(${target} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    # set the properties required for debugging
+    set_target_properties(${target} PROPERTIES 
+        VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        
+        XCODE_SCHEME_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        XCODE_GENERATE_SCHEME ON)
 
     # link the target to its SFML dependencies
     if(THIS_DEPENDS)
@@ -363,6 +370,11 @@ macro(sfml_add_example target)
     if(SFML_OS_WINDOWS AND SFML_USE_MESA3D)
         add_dependencies(${target} "install-mesa3d")
     endif()
+
+    # Enable support for UTF-8 characters in source code
+    if(SFML_COMPILER_MSVC)
+        target_compile_options(${target} PRIVATE /utf-8)
+    endif()
 endmacro()
 
 # add a new target which is a SFML test
@@ -375,7 +387,7 @@ function(sfml_add_test target SOURCES DEPENDS)
     source_group("" FILES ${SOURCES})
 
     # create the target
-    add_executable(${target} ${SOURCES})
+    add_executable(${target} ${SOURCES} ${PROJECT_SOURCE_DIR}/test/main.cpp)
 
     # enable precompiled headers
     if (SFML_ENABLE_PCH)
@@ -395,6 +407,7 @@ function(sfml_add_test target SOURCES DEPENDS)
 
         XCODE_GENERATE_SCHEME ON # Required to set arguments
         XCODE_SCHEME_ARGUMENTS "-b" # Break into debugger
+        XCODE_SCHEME_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} # set the Xcode startup path for debugging
     )
 
     # link the target to its SFML dependencies
@@ -421,13 +434,22 @@ function(sfml_add_test target SOURCES DEPENDS)
 
         # When running tests on Android, use a custom shell script to invoke commands using adb shell
         if(SFML_OS_ANDROID)
-            set_target_properties(${target} PROPERTIES CROSSCOMPILING_EMULATOR "${PROJECT_BINARY_DIR}/run-in-adb-shell.sh")
+            if(CMAKE_HOST_WIN32)
+                set_target_properties(${target} PROPERTIES CROSSCOMPILING_EMULATOR "${PROJECT_BINARY_DIR}/run-in-adb-shell.bat")
+            else()
+                set_target_properties(${target} PROPERTIES CROSSCOMPILING_EMULATOR "${PROJECT_BINARY_DIR}/run-in-adb-shell.sh")
+            endif()
         endif()
     endif()
 
     # Required to actually run the tests
     if(SFML_OS_IOS)
         sfml_set_common_ios_properties(${target})
+    endif()
+
+    # Enable support for UTF-8 characters in source code
+    if(SFML_COMPILER_MSVC)
+        target_compile_options(${target} PRIVATE /utf-8)
     endif()
 
     # Add the test

@@ -5,6 +5,7 @@
 #include <SFML/System/FileInputStream.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <AudioUtil.hpp>
 #include <SystemUtil.hpp>
@@ -44,7 +45,7 @@ TEST_CASE("[Audio] sf::SoundBuffer", runAudioDeviceTests())
 
             SECTION("Valid file")
             {
-                const sf::SoundBuffer soundBuffer("Audio/ding.flac");
+                const sf::SoundBuffer soundBuffer("ding.flac");
                 CHECK(soundBuffer.getSamples() != nullptr);
                 CHECK(soundBuffer.getSampleCount() == 87798);
                 CHECK(soundBuffer.getSampleRate() == 44100);
@@ -63,7 +64,7 @@ TEST_CASE("[Audio] sf::SoundBuffer", runAudioDeviceTests())
 
             SECTION("Valid memory")
             {
-                const auto            memory = loadIntoMemory("Audio/ding.flac");
+                const auto            memory = loadIntoMemory("ding.flac");
                 const sf::SoundBuffer soundBuffer(memory.data(), memory.size());
                 CHECK(soundBuffer.getSamples() != nullptr);
                 CHECK(soundBuffer.getSampleCount() == 87798);
@@ -75,7 +76,7 @@ TEST_CASE("[Audio] sf::SoundBuffer", runAudioDeviceTests())
 
         SECTION("Stream")
         {
-            sf::FileInputStream   stream("Audio/ding.flac");
+            sf::FileInputStream   stream("ding.flac");
             const sf::SoundBuffer soundBuffer(stream);
             CHECK(soundBuffer.getSamples() != nullptr);
             CHECK(soundBuffer.getSampleCount() == 87798);
@@ -87,7 +88,7 @@ TEST_CASE("[Audio] sf::SoundBuffer", runAudioDeviceTests())
 
     SECTION("Copy semantics")
     {
-        const sf::SoundBuffer soundBuffer("Audio/ding.flac");
+        const sf::SoundBuffer soundBuffer("ding.flac");
 
         SECTION("Construction")
         {
@@ -101,7 +102,7 @@ TEST_CASE("[Audio] sf::SoundBuffer", runAudioDeviceTests())
 
         SECTION("Assignment")
         {
-            sf::SoundBuffer soundBufferCopy("Audio/doodle_pop.ogg");
+            sf::SoundBuffer soundBufferCopy("doodle_pop.ogg");
             soundBufferCopy = soundBuffer;
             CHECK(soundBufferCopy.getSamples() != nullptr);
             CHECK(soundBufferCopy.getSampleCount() == 87798);
@@ -122,7 +123,11 @@ TEST_CASE("[Audio] sf::SoundBuffer", runAudioDeviceTests())
 
         SECTION("Valid file")
         {
-            REQUIRE(soundBuffer.loadFromFile("Audio/ding.flac"));
+            const std::u32string        filenameSuffix = GENERATE(U"", U"-ń", U"-🐌");
+            const std::filesystem::path filename       = U"ding" + filenameSuffix + U".flac";
+            INFO("Filename: " << reinterpret_cast<const char*>(filename.u8string().c_str()));
+
+            REQUIRE(soundBuffer.loadFromFile(filename));
             CHECK(soundBuffer.getSamples() != nullptr);
             CHECK(soundBuffer.getSampleCount() == 87798);
             CHECK(soundBuffer.getSampleRate() == 44100);
@@ -144,7 +149,7 @@ TEST_CASE("[Audio] sf::SoundBuffer", runAudioDeviceTests())
 
         SECTION("Valid memory")
         {
-            const auto memory = loadIntoMemory("Audio/ding.flac");
+            const auto memory = loadIntoMemory("ding.flac");
             REQUIRE(soundBuffer.loadFromMemory(memory.data(), memory.size()));
             CHECK(soundBuffer.getSamples() != nullptr);
             CHECK(soundBuffer.getSampleCount() == 87798);
@@ -166,7 +171,7 @@ TEST_CASE("[Audio] sf::SoundBuffer", runAudioDeviceTests())
 
         SECTION("Valid stream")
         {
-            REQUIRE(stream.open("Audio/ding.flac"));
+            REQUIRE(stream.open("ding.flac"));
             REQUIRE(soundBuffer.loadFromStream(stream));
             CHECK(soundBuffer.getSamples() != nullptr);
             CHECK(soundBuffer.getSampleCount() == 87798);
@@ -178,12 +183,13 @@ TEST_CASE("[Audio] sf::SoundBuffer", runAudioDeviceTests())
 
     SECTION("saveToFile()")
     {
-        const auto filename = std::filesystem::temp_directory_path() / "ding.flac";
+        const std::u32string stem      = GENERATE(U"tmp", U"tmp-ń", U"tmp-🐌");
+        const std::u32string extension = GENERATE(U".wav", U".ogg", U".flac");
+        const auto filename = std::filesystem::temp_directory_path() / std::filesystem::path(stem + extension);
 
-        {
-            const sf::SoundBuffer soundBuffer("Audio/ding.flac");
-            REQUIRE(soundBuffer.saveToFile(filename));
-        }
+        INFO("Filename: " << reinterpret_cast<const char*>(filename.u8string().c_str()));
+
+        REQUIRE(sf::SoundBuffer("ding.flac").saveToFile(filename));
 
         const sf::SoundBuffer soundBuffer(filename);
         CHECK(soundBuffer.getSamples() != nullptr);

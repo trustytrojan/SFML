@@ -137,14 +137,16 @@ bool SoundFileWriterFlac::open(const std::filesystem::path&     filename,
         return false;
     }
 
+    // Open file
+    m_file = openFile(filename, "w+b");
+
     // Setup the encoder
     FLAC__stream_encoder_set_channels(m_encoder.get(), channelCount);
     FLAC__stream_encoder_set_bits_per_sample(m_encoder.get(), 16);
     FLAC__stream_encoder_set_sample_rate(m_encoder.get(), sampleRate);
 
     // Initialize the output stream
-    if (FLAC__stream_encoder_init_file(m_encoder.get(), filename.string().c_str(), nullptr, nullptr) !=
-        FLAC__STREAM_ENCODER_INIT_STATUS_OK)
+    if (FLAC__stream_encoder_init_FILE(m_encoder.get(), m_file, nullptr, nullptr) != FLAC__STREAM_ENCODER_INIT_STATUS_OK)
     {
         err() << "Failed to write flac file (failed to open the file)\n" << formatDebugPathInfo(filename) << std::endl;
         m_encoder.reset();
@@ -164,7 +166,7 @@ void SoundFileWriterFlac::write(const std::int16_t* samples, std::uint64_t count
     while (count > 0)
     {
         // Make sure that we don't process too many samples at once
-        const unsigned int frames = std::min(static_cast<unsigned int>(count / m_channelCount), 10000u);
+        const unsigned int frames = std::min(static_cast<unsigned int>(count / m_channelCount), 10'000u);
 
         // Convert the samples to 32-bits and remap the channels
         m_samples32.clear();

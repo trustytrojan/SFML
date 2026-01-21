@@ -1,13 +1,9 @@
 include(FetchContent)
 
-add_subdirectory(install)
-set_target_warnings(test-sfml-install)
-
-set(CATCH_CONFIG_FAST_COMPILE ON CACHE BOOL "")
 set(CATCH_CONFIG_NO_EXPERIMENTAL_STATIC_ANALYSIS_SUPPORT ON CACHE BOOL "")
 FetchContent_Declare(Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG v3.8.1
+    GIT_TAG v3.9.1
     GIT_SHALLOW ON)
 FetchContent_MakeAvailable(Catch2)
 include(Catch)
@@ -16,7 +12,7 @@ include(Catch)
 target_compile_features(Catch2 PRIVATE cxx_std_17)
 
 # Ensure that Catch2 sources and headers are not analyzed by any tools
-set_target_properties(Catch2 PROPERTIES COMPILE_OPTIONS "" EXPORT_COMPILE_COMMANDS OFF)
+set_target_properties(Catch2 PROPERTIES COMPILE_OPTIONS "" EXPORT_COMPILE_COMMANDS OFF UNITY_BUILD ON UNITY_BUILD_BATCH_SIZE 256)
 set_target_properties(Catch2WithMain PROPERTIES EXPORT_COMPILE_COMMANDS OFF)
 set_target_properties(Catch2 Catch2WithMain PROPERTIES FOLDER "Dependencies")
 get_target_property(CATCH2_INCLUDE_DIRS Catch2 INTERFACE_INCLUDE_DIRECTORIES)
@@ -25,6 +21,8 @@ target_include_directories(Catch2 SYSTEM INTERFACE ${CATCH2_INCLUDE_DIRS})
 add_library(sfml-test-main STATIC
     TestUtilities/SystemUtil.hpp
     TestUtilities/SystemUtil.cpp
+    TestUtilities/NetworkUtil.hpp
+    TestUtilities/NetworkUtil.cpp
     TestUtilities/WindowUtil.hpp
     TestUtilities/WindowUtil.cpp
     TestUtilities/GraphicsUtil.hpp
@@ -33,7 +31,15 @@ add_library(sfml-test-main STATIC
     TestUtilities/AudioUtil.cpp
 )
 target_include_directories(sfml-test-main PUBLIC TestUtilities)
-target_link_libraries(sfml-test-main PUBLIC SFML::System Catch2::Catch2WithMain)
+target_link_libraries(sfml-test-main PUBLIC SFML::System)
+
+# Main is required on some platforms and is completely removed on others, so we can only depend on it when it exists
+if(TARGET SFML::Main)
+    target_link_libraries(sfml-test-main PUBLIC SFML::Main Catch2::Catch2)
+else()
+    target_link_libraries(sfml-test-main PUBLIC Catch2::Catch2WithMain)
+endif()
+
 set_target_warnings(sfml-test-main)
 
 # set the target flags to use the appropriate C++ standard library
@@ -51,150 +57,96 @@ if(SFML_RUN_AUDIO_DEVICE_TESTS)
     target_compile_definitions(sfml-test-main PRIVATE SFML_RUN_AUDIO_DEVICE_TESTS)
 endif()
 
-set(SYSTEM_SRC
-    System/Angle.test.cpp
-    System/Clock.test.cpp
-    System/Config.test.cpp
-    System/Err.test.cpp
-    System/Exception.test.cpp
-    System/FileInputStream.test.cpp
-    System/MemoryInputStream.test.cpp
-    System/Sleep.test.cpp
-    System/String.test.cpp
-    System/Time.test.cpp
-    System/Utf.test.cpp
-    System/Vector2.test.cpp
-    System/Vector3.test.cpp
-)
-sfml_add_test(test-sfml-system "${SYSTEM_SRC}" "")
-target_compile_definitions(test-sfml-system PRIVATE
-    EXPECTED_SFML_VERSION_MAJOR=${SFML_VERSION_MAJOR}
-    EXPECTED_SFML_VERSION_MINOR=${SFML_VERSION_MINOR}
-    EXPECTED_SFML_VERSION_PATCH=${SFML_VERSION_PATCH}
-    EXPECTED_SFML_VERSION_IS_RELEASE=$<IF:$<BOOL:${VERSION_IS_RELEASE}>,true,false>
-)
-
-set(WINDOW_SRC
-    Window/Clipboard.test.cpp
-    Window/Context.test.cpp
-    Window/ContextSettings.test.cpp
-    Window/Cursor.test.cpp
-    Window/Event.test.cpp
-    Window/GlResource.test.cpp
-    Window/Joystick.test.cpp
-    Window/Keyboard.test.cpp
-    Window/VideoMode.test.cpp
-    Window/Vulkan.test.cpp
-    Window/Window.test.cpp
-    Window/WindowBase.test.cpp
-)
-sfml_add_test(test-sfml-window "${WINDOW_SRC}" SFML::Window)
-
-set(GRAPHICS_SRC
-    Graphics/BlendMode.test.cpp
-    Graphics/CircleShape.test.cpp
-    Graphics/Color.test.cpp
-    Graphics/ConvexShape.test.cpp
-    Graphics/CoordinateType.test.cpp
-    Graphics/Drawable.test.cpp
-    Graphics/Font.test.cpp
-    Graphics/Glsl.test.cpp
-    Graphics/Glyph.test.cpp
-    Graphics/Image.test.cpp
-    Graphics/Rect.test.cpp
-    Graphics/RectangleShape.test.cpp
-    Graphics/Render.test.cpp
-    Graphics/RenderStates.test.cpp
-    Graphics/RenderTarget.test.cpp
-    Graphics/RenderTexture.test.cpp
-    Graphics/RenderWindow.test.cpp
-    Graphics/Shader.test.cpp
-    Graphics/Shape.test.cpp
-    Graphics/Sprite.test.cpp
-    Graphics/StencilMode.test.cpp
-    Graphics/Text.test.cpp
-    Graphics/Texture.test.cpp
-    Graphics/Transform.test.cpp
-    Graphics/Transformable.test.cpp
-    Graphics/Vertex.test.cpp
-    Graphics/VertexArray.test.cpp
-    Graphics/VertexBuffer.test.cpp
-    Graphics/View.test.cpp
-)
-if(SFML_OS_WINDOWS)
-    list(APPEND GRAPHICS_SRC
-        Graphics/WindowHandleWin32.test.cpp
-    )
-endif()
-sfml_add_test(test-sfml-graphics "${GRAPHICS_SRC}" SFML::Graphics)
-if(SFML_RUN_DISPLAY_TESTS)
-    target_compile_definitions(test-sfml-graphics PRIVATE SFML_RUN_DISPLAY_TESTS)
+if(NOT SFML_OS_IOS)
+    target_compile_definitions(sfml-test-main PRIVATE SFML_RUN_CONNECTION_TESTS)
+    target_compile_definitions(sfml-test-main PRIVATE SFML_RUN_LOOPBACK_TESTS)
 endif()
 
-set(NETWORK_SRC
-    Network/Ftp.test.cpp
-    Network/Http.test.cpp
-    Network/IpAddress.test.cpp
-    Network/Packet.test.cpp
-    Network/Socket.test.cpp
-    Network/SocketSelector.test.cpp
-    Network/TcpListener.test.cpp
-    Network/TcpSocket.test.cpp
-    Network/UdpSocket.test.cpp
-)
-sfml_add_test(test-sfml-network "${NETWORK_SRC}" SFML::Network)
+add_subdirectory(Audio)
+add_subdirectory(Graphics)
+add_subdirectory(Network)
+add_subdirectory(System)
+add_subdirectory(Window)
 
-set(AUDIO_SRC
-    Audio/AudioResource.test.cpp
-    Audio/InputSoundFile.test.cpp
-    Audio/Listener.test.cpp
-    Audio/Music.test.cpp
-    Audio/OutputSoundFile.test.cpp
-    Audio/Sound.test.cpp
-    Audio/SoundBuffer.test.cpp
-    Audio/SoundBufferRecorder.test.cpp
-    Audio/SoundFileFactory.test.cpp
-    Audio/SoundFileReader.test.cpp
-    Audio/SoundFileWriter.test.cpp
-    Audio/SoundRecorder.test.cpp
-    Audio/SoundSource.test.cpp
-    Audio/SoundStream.test.cpp
-)
-sfml_add_test(test-sfml-audio "${AUDIO_SRC}" SFML::Audio)
+if(SFML_OS_ANDROID)
+    # We can only write to the tmp directory on the Android virtual device
+    set(TARGET_DIR "/data/local/tmp")
 
-if(SFML_OS_ANDROID AND DEFINED ENV{LIBCXX_SHARED_SO})
-    # Because we can only write to the tmp directory on the Android virtual device we will need to build our directory tree under it
-    set(TARGET_DIR "/data/local/tmp/$<TARGET_FILE_DIR:test-sfml-system>")
+    # adb is required to push to device when running tests on the command line
+    # which not everybody will want/need to do, so only cause an error when trying to do that
+    find_program(ADB adb)
 
-    # Generate script that copies necessary files over to the Android virtual device
-    file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/prepare-android-files.sh" CONTENT
-        "#!/bin/bash\n\
-        adb shell \"mkdir -p ${TARGET_DIR}\"\n\
-        adb push $<TARGET_FILE:test-sfml-audio>    ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:test-sfml-graphics> ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:test-sfml-network>  ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:test-sfml-system>   ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:test-sfml-window>   ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:SFML::Audio>        ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:SFML::Graphics>     ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:SFML::Network>      ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:SFML::System>       ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:SFML::Window>       ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:Catch2>             ${TARGET_DIR}\n\
-        adb push $<TARGET_FILE:Catch2WithMain>     ${TARGET_DIR}\n\
-        adb push $ENV{LIBCXX_SHARED_SO}            ${TARGET_DIR}\n\
-        adb push ${CMAKE_CURRENT_LIST_DIR}         ${TARGET_DIR}\n\
-        adb shell \"chmod -R 775 ${TARGET_DIR} && ls -la ${TARGET_DIR}\"\n"
-        FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+    if(ADB)
+        # Copy binaries for all the required targets
+        add_custom_target(prepare-android-files
+            COMMAND ${ADB} push "$<TARGET_FILE:test-sfml-audio>"        ${TARGET_DIR}/$<TARGET_FILE_NAME:test-sfml-audio>
+            COMMAND ${ADB} push "$<TARGET_FILE:test-sfml-graphics>"     ${TARGET_DIR}/$<TARGET_FILE_NAME:test-sfml-graphics>
+            COMMAND ${ADB} push "$<TARGET_FILE:test-sfml-network>"      ${TARGET_DIR}/$<TARGET_FILE_NAME:test-sfml-network>
+            COMMAND ${ADB} push "$<TARGET_FILE:test-sfml-system>"       ${TARGET_DIR}/$<TARGET_FILE_NAME:test-sfml-system>
+            COMMAND ${ADB} push "$<TARGET_FILE:test-sfml-window>"       ${TARGET_DIR}/$<TARGET_FILE_NAME:test-sfml-window>
+            COMMAND ${ADB} push "$<TARGET_FILE:SFML::Audio>"            ${TARGET_DIR}/$<TARGET_FILE_NAME:SFML::Audio>
+            COMMAND ${ADB} push "$<TARGET_FILE:SFML::Graphics>"         ${TARGET_DIR}/$<TARGET_FILE_NAME:SFML::Graphics>
+            COMMAND ${ADB} push "$<TARGET_FILE:SFML::Network>"          ${TARGET_DIR}/$<TARGET_FILE_NAME:SFML::Network>
+            COMMAND ${ADB} push "$<TARGET_FILE:SFML::System>"           ${TARGET_DIR}/$<TARGET_FILE_NAME:SFML::System>
+            COMMAND ${ADB} push "$<TARGET_FILE:SFML::Window>"           ${TARGET_DIR}/$<TARGET_FILE_NAME:SFML::Window>
+            COMMAND ${ADB} push "$<TARGET_FILE:Catch2>"                 ${TARGET_DIR}/$<TARGET_FILE_NAME:Catch2>
+            COMMAND ${ADB} push "$<TARGET_FILE:Catch2WithMain>"         ${TARGET_DIR}/$<TARGET_FILE_NAME:Catch2WithMain>
+            COMMAND ${ADB} push "${CMAKE_CURRENT_LIST_DIR}/Audio/."     ${TARGET_DIR}
+            COMMAND ${ADB} push "${CMAKE_CURRENT_LIST_DIR}/Graphics/."  ${TARGET_DIR}
+            COMMAND ${ADB} push "${CMAKE_CURRENT_LIST_DIR}/System/."    ${TARGET_DIR}
+            COMMAND ${ADB} push "${CMAKE_CURRENT_LIST_DIR}/Audio/."     ${TARGET_DIR}
+            COMMAND ${ADB} shell "chmod -R 775            ${TARGET_DIR}"
+            COMMAND ${ADB} shell "ls -la                  ${TARGET_DIR}"
+        )
 
-    # Add the target to invoke the file copy script
-    add_custom_target(prepare-android-files COMMAND "${PROJECT_BINARY_DIR}/prepare-android-files.sh")
+        # Generate proxy script that translates CTest commands into adb shell commands
+        if(CMAKE_HOST_WIN32)
+            file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/run-in-adb-shell.bat" CONTENT
+                "@echo off\n\
+                for %%f in (\"%1\") do set \"exe=%%~nxf\"\n\
+                adb shell \"cd ${TARGET_DIR}; LD_LIBRARY_PATH=${TARGET_DIR} /data/local/tmp/%exe% \\\"%2\\\" \\\"%3\\\" \\\"%4\\\" \\\"%5\\\" \\\"%6\\\" \\\"%7\\\" \\\"%8\\\" \\\"%9\\\"\"\n"
+                FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+        else()
+            file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/run-in-adb-shell.sh" CONTENT
+                "#!/bin/bash\n\
+                exe=$(basename $1)
+                adb shell \"cd ${TARGET_DIR}; LD_LIBRARY_PATH=${TARGET_DIR} /data/local/tmp/$exe \\\"$2\\\" \\\"$3\\\" \\\"$4\\\" \\\"$5\\\" \\\"$6\\\" \\\"$7\\\" \\\"$8\\\" \\\"$9\\\"\"\n"
+                FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+        endif()
 
-    # Generate proxy script that translates CTest commands into adb shell commands
-    file(GENERATE OUTPUT "${PROJECT_BINARY_DIR}/run-in-adb-shell.sh" CONTENT
-        "#!/bin/bash\n\
-        adb shell \"cd ${TARGET_DIR}/test; LD_LIBRARY_PATH=${TARGET_DIR} /data/local/tmp/$1 \\\"$2\\\" \\\"$3\\\" \\\"$4\\\" \\\"$5\\\" \\\"$6\\\" \\\"$7\\\" \\\"$8\\\" \\\"$9\\\"\"\n"
-        FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+        # If using shared STL that also needs to be copied
+        if(CMAKE_ANDROID_STL_TYPE STREQUAL "c++_shared")
+            # Find it in the ndk first. It's located in a path specific to both host and target arch
+            if(CMAKE_HOST_WIN32)
+                set(HOST_FOLDER "windows-x86_64")
+            elseif(CMAKE_HOST_APPLE)
+                set(HOST_FOLDER "darwin-x86_64")
+            else()
+                set(HOST_FOLDER "linux-x86_64")
+            endif()
+
+            if(CMAKE_ANDROID_ARCH_ABI STREQUAL "arm64-v8a")
+                set(TARGET_FOLDER "aarch64-linux-android")
+            elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "armeabi-v7a")
+                set(TARGET_FOLDER "arm-linux-androideabi")
+            elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "x86_64")
+                set(TARGET_FOLDER "x86_64-linux-android")
+            elseif(CMAKE_ANDROID_ARCH_ABI STREQUAL "x86")
+                set(TARGET_FOLDER "i686-linux-android")
+            endif()
+
+            find_file(STL_LIB libc++_shared.so PATHS
+                ${CMAKE_ANDROID_NDK}/toolchains/llvm/prebuilt/${HOST_FOLDER}/sysroot/usr/lib/${TARGET_FOLDER}
+                REQUIRED)
+            add_custom_command(TARGET prepare-android-files POST_BUILD
+                COMMAND ${ADB} push "${STL_LIB}" ${TARGET_DIR}/libc++_shared.so)
+        endif()
+    else()
+        # Error message and fail
+        add_custom_target(prepare-android-files
+            COMMAND ${CMAKE_COMMAND} -E echo "adb wasn't found, install it and reconfigure"
+            COMMAND ${CMAKE_COMMAND} -E false)
+    endif()
 endif()
 
 if(SFML_ENABLE_COVERAGE AND SFML_OS_WINDOWS AND NOT SFML_COMPILER_GCC)

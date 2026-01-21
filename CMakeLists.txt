@@ -1,12 +1,9 @@
-if(CMAKE_HOST_WIN32)
-    # We require a CMake version greater than or equal to 3.24 on Windows in order to
-    # support specifying target_include_directories with SYSTEM for Visual Studio Generators
-    # see: https://cmake.org/cmake/help/latest/release/3.24.html#generators
-    cmake_minimum_required(VERSION 3.24)
-else()
-    # For all other systems, 3.22 will suffice
-    cmake_minimum_required(VERSION 3.22)
-endif()
+cmake_minimum_required(VERSION 3.28)
+
+# Prevent in-source builds
+if("${CMAKE_BINARY_DIR}" STREQUAL "${CMAKE_SOURCE_DIR}")
+    message(FATAL_ERROR "In-source builds are not permitted! Make sure to use a separate build directory")
+endif ()
 
 # define a macro that helps defining an option
 macro(sfml_set_option var default type docstring)
@@ -18,10 +15,9 @@ endmacro()
 
 # these options have to be set before CMake detects/configures the toolchain
 
-# use new MSVC debug information format specification mechanism if available
-# we use this mechanism to embed debug information into the object file to allow ccache to cache it
-if(POLICY CMP0141)
-    cmake_policy(SET CMP0141 NEW)
+# When configuring with `--fresh`, also do a fresh configure for fetched dependencies
+if(POLICY CMP0168)
+    cmake_policy(SET CMP0168 NEW)
 endif()
 
 # determine whether to create a debug or release build
@@ -29,9 +25,9 @@ sfml_set_option(CMAKE_BUILD_TYPE Release STRING "Choose the type of build (Debug
 sfml_set_option(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" STRING "The minimal iOS version that will be able to run the built binaries. Cannot be lower than 13.0")
 
 # project name
-project(SFML VERSION 3.0.2)
+project(SFML VERSION 3.1.0)
 
-set(VERSION_IS_RELEASE ON)
+set(VERSION_IS_RELEASE OFF)
 
 # include the configuration file
 include(cmake/Config.cmake)
@@ -74,9 +70,6 @@ endif()
 if(SFML_OS_MACOS OR SFML_OS_IOS)
     # add an option to build frameworks instead of dylibs (release only)
     sfml_set_option(SFML_BUILD_FRAMEWORKS OFF BOOL "ON to build SFML as frameworks libraries (release only), OFF to build according to BUILD_SHARED_LIBS")
-
-    # add an option to automatically install Xcode templates
-    sfml_set_option(SFML_INSTALL_XCODE_TEMPLATES OFF BOOL "ON to automatically install the Xcode templates, OFF to do nothing about it. The templates are compatible with Xcode 4 and 5.")
 endif()
 
 # Android options
@@ -122,9 +115,6 @@ else()
 endif()
 
 sfml_set_option(SFML_USE_SYSTEM_DEPS ${SFML_USE_SYSTEM_DEPS_DEFAULT} BOOL "ON to use system dependencies, OFF to use the bundled ones.")
-if(SFML_USE_SYSTEM_DEPS AND SFML_INSTALL_XCODE_TEMPLATES)
-    message(FATAL_ERROR "XCode templates installation cannot be used with the SFML_USE_SYSTEM_DEPS option (the bundled frameworks are required.)")
-endif()
 
 if(SFML_COMPILER_MSVC)
     # add an option to choose whether PDB debug symbols should be generated (defaults to true when possible)
@@ -175,9 +165,6 @@ if(SFML_OS_MACOS)
             return()
         endif()
     endif()
-
-    # configure Xcode templates
-    set(XCODE_TEMPLATES_ARCH "\$(NATIVE_ARCH_ACTUAL)")
 
     if(NOT SFML_COMPILER_CLANG)
         message(FATAL_ERROR "Clang is the only supported compiler on macOS")
@@ -373,21 +360,6 @@ endif()
 install(FILES license.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
 install(FILES readme.md DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
-# install the Xcode templates if requested
-if(SFML_INSTALL_XCODE_TEMPLATES)
-    # configure the templates plist files
-    foreach(TEMPLATE "SFML Compiler" "SFML App")
-        configure_file(
-                    "tools/xcode/templates/SFML/${TEMPLATE}.xctemplate/TemplateInfo.plist.in"
-                    "${CMAKE_CURRENT_BINARY_DIR}/tools/xcode/templates/SFML/${TEMPLATE}.xctemplate/TemplateInfo.plist"
-                    @ONLY)
-    endforeach()
-    install(DIRECTORY "tools/xcode/templates/SFML" "${CMAKE_CURRENT_BINARY_DIR}/tools/xcode/templates/SFML"
-            DESTINATION /Library/Developer/Xcode/Templates
-            PATTERN "*.in" EXCLUDE
-            PATTERN ".DS_Store" EXCLUDE)
-endif()
-
 sfml_export_targets()
 
 # configure extras by default when building SFML directly, otherwise hide them
@@ -443,6 +415,9 @@ if(SFML_BUILD_TEST_SUITE)
         message(WARNING "Cannot build unit testing unless all modules are enabled")
     endif()
 endif()
+
+# add an option for making OpenGL errors fatal
+sfml_set_option(SFML_FATAL_OPENGL_ERRORS OFF BOOL "ON to make SFML OpenGL errors fatal, OFF to simply warn about them")
 
 sfml_set_option(CLANG_FORMAT_EXECUTABLE clang-format STRING "Override clang-format executable, requires version 17")
 add_custom_target(format

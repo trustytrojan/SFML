@@ -41,7 +41,7 @@ TEST_CASE("[Graphics] sf::Image")
             {
                 SECTION("bmp")
                 {
-                    const sf::Image image("Graphics/sfml-logo-big.bmp");
+                    const sf::Image image("sfml-logo-big.bmp");
                     CHECK(image.getPixel({0, 0}) == sf::Color::White);
                     CHECK(image.getPixel({200, 150}) == sf::Color(144, 208, 62));
                     CHECK(image.getSize() == sf::Vector2u(1001, 304));
@@ -50,7 +50,7 @@ TEST_CASE("[Graphics] sf::Image")
 
                 SECTION("png")
                 {
-                    const sf::Image image("Graphics/sfml-logo-big.png");
+                    const sf::Image image("sfml-logo-big.png");
                     CHECK(image.getPixel({0, 0}) == sf::Color(255, 255, 255, 0));
                     CHECK(image.getPixel({200, 150}) == sf::Color(144, 208, 62));
                     CHECK(image.getSize() == sf::Vector2u(1001, 304));
@@ -59,7 +59,7 @@ TEST_CASE("[Graphics] sf::Image")
 
                 SECTION("jpg")
                 {
-                    const sf::Image image("Graphics/sfml-logo-big.jpg");
+                    const sf::Image image("sfml-logo-big.jpg");
                     CHECK(image.getPixel({0, 0}) == sf::Color::White);
                     CHECK(image.getPixel({200, 150}) == sf::Color(144, 208, 62));
                     CHECK(image.getSize() == sf::Vector2u(1001, 304));
@@ -68,7 +68,7 @@ TEST_CASE("[Graphics] sf::Image")
 
                 SECTION("gif")
                 {
-                    const sf::Image image("Graphics/sfml-logo-big.gif");
+                    const sf::Image image("sfml-logo-big.gif");
                     CHECK(image.getPixel({0, 0}) == sf::Color::White);
                     CHECK(image.getPixel({200, 150}) == sf::Color(146, 210, 62));
                     CHECK(image.getSize() == sf::Vector2u(1001, 304));
@@ -77,8 +77,17 @@ TEST_CASE("[Graphics] sf::Image")
 
                 SECTION("psd")
                 {
-                    const sf::Image image("Graphics/sfml-logo-big.psd");
+                    const sf::Image image("sfml-logo-big.psd");
                     CHECK(image.getPixel({0, 0}) == sf::Color::White);
+                    CHECK(image.getPixel({200, 150}) == sf::Color(144, 208, 62));
+                    CHECK(image.getSize() == sf::Vector2u(1001, 304));
+                    CHECK(image.getPixelsPtr() != nullptr);
+                }
+
+                SECTION("qoi")
+                {
+                    const sf::Image image("sfml-logo-big.qoi");
+                    CHECK(image.getPixel({0, 0}) == sf::Color(255, 255, 255, 0));
                     CHECK(image.getPixel({200, 150}) == sf::Color(144, 208, 62));
                     CHECK(image.getSize() == sf::Vector2u(1001, 304));
                     CHECK(image.getPixelsPtr() != nullptr);
@@ -129,7 +138,7 @@ TEST_CASE("[Graphics] sf::Image")
 
         SECTION("Stream constructor")
         {
-            sf::FileInputStream stream("Graphics/sfml-logo-big.png");
+            sf::FileInputStream stream("sfml-logo-big.png");
             const sf::Image     image(stream);
             CHECK(image.getSize() == sf::Vector2u(1001, 304));
             CHECK(image.getPixelsPtr() != nullptr);
@@ -265,6 +274,18 @@ TEST_CASE("[Graphics] sf::Image")
             CHECK(!image.loadFromFile("."));
             CHECK(!image.loadFromFile("this/does/not/exist.jpg"));
 
+            // small n with tilde, from Spanish, outside of ASCII, inside common Latin 1 codepage
+            CHECK(!image.loadFromFile(std::filesystem::path(U"missing-file-ñ.png")));
+
+            // small n with acute accent, from Polish, outside of Latin 1 codepage
+            CHECK(!image.loadFromFile(std::filesystem::path(U"missing-file-ń.png")));
+
+            // CJK symbol for Sun, outside of any European language codepage
+            CHECK(!image.loadFromFile(std::filesystem::path(U"missing-file-日.png")));
+
+            // snail emoji, outside of Unicode Basic Multilingual Plane
+            CHECK(!image.loadFromFile(std::filesystem::path(U"missing-file-🐌.png")));
+
             CHECK(image.getSize() == sf::Vector2u(0, 0));
             CHECK(image.getPixelsPtr() == nullptr);
         }
@@ -273,36 +294,43 @@ TEST_CASE("[Graphics] sf::Image")
         {
             SECTION("bmp")
             {
-                REQUIRE(image.loadFromFile("Graphics/sfml-logo-big.bmp"));
+                REQUIRE(image.loadFromFile("sfml-logo-big.bmp"));
                 CHECK(image.getPixel({0, 0}) == sf::Color::White);
                 CHECK(image.getPixel({200, 150}) == sf::Color(144, 208, 62));
             }
 
             SECTION("png")
             {
-                REQUIRE(image.loadFromFile("Graphics/sfml-logo-big.png"));
+                REQUIRE(image.loadFromFile("sfml-logo-big.png"));
                 CHECK(image.getPixel({0, 0}) == sf::Color(255, 255, 255, 0));
                 CHECK(image.getPixel({200, 150}) == sf::Color(144, 208, 62));
             }
 
             SECTION("jpg")
             {
-                REQUIRE(image.loadFromFile("Graphics/sfml-logo-big.jpg"));
+                REQUIRE(image.loadFromFile("sfml-logo-big.jpg"));
                 CHECK(image.getPixel({0, 0}) == sf::Color::White);
                 CHECK(image.getPixel({200, 150}) == sf::Color(144, 208, 62));
             }
 
             SECTION("gif")
             {
-                REQUIRE(image.loadFromFile("Graphics/sfml-logo-big.gif"));
+                REQUIRE(image.loadFromFile("sfml-logo-big.gif"));
                 CHECK(image.getPixel({0, 0}) == sf::Color::White);
                 CHECK(image.getPixel({200, 150}) == sf::Color(146, 210, 62));
             }
 
             SECTION("psd")
             {
-                REQUIRE(image.loadFromFile("Graphics/sfml-logo-big.psd"));
+                REQUIRE(image.loadFromFile("sfml-logo-big.psd"));
                 CHECK(image.getPixel({0, 0}) == sf::Color::White);
+                CHECK(image.getPixel({200, 150}) == sf::Color(144, 208, 62));
+            }
+
+            SECTION("qoi")
+            {
+                REQUIRE(image.loadFromFile("sfml-logo-big.qoi"));
+                CHECK(image.getPixel({0, 0}) == sf::Color(255, 255, 255, 0));
                 CHECK(image.getPixel({200, 150}) == sf::Color(144, 208, 62));
             }
 
@@ -312,7 +340,7 @@ TEST_CASE("[Graphics] sf::Image")
 
         SECTION("Successful then unsuccessful load")
         {
-            REQUIRE(image.loadFromFile("Graphics/sfml-logo-big.jpg"));
+            REQUIRE(image.loadFromFile("sfml-logo-big.jpg"));
             CHECK(image.getSize() == sf::Vector2u(1001, 304));
             CHECK(image.getPixelsPtr() != nullptr);
 
@@ -392,7 +420,7 @@ TEST_CASE("[Graphics] sf::Image")
             CHECK(!image.loadFromStream(stream));
         }
 
-        REQUIRE(stream.open("Graphics/sfml-logo-big.png"));
+        REQUIRE(stream.open("sfml-logo-big.png"));
 
         SECTION("Successful load")
         {
@@ -445,22 +473,51 @@ TEST_CASE("[Graphics] sf::Image")
             SECTION("To .bmp")
             {
                 filename /= "test.bmp";
-                CHECK(image.saveToFile(filename));
             }
 
             SECTION("To .tga")
             {
                 filename /= "test.tga";
-                CHECK(image.saveToFile(filename));
             }
 
             SECTION("To .png")
             {
                 filename /= "test.png";
-                CHECK(image.saveToFile(filename));
+            }
+
+            SECTION("To .qoi")
+            {
+                filename /= "test.qoi";
+            }
+
+            SECTION("To Spanish Latin1 filename .png")
+            {
+                // small n with tilde, from Spanish, outside of ASCII, inside common Latin 1 codepage
+                filename /= U"test-ñ.png";
+            }
+
+            SECTION("To Polish filename .png")
+            {
+                // small n with acute accent, from Polish, outside of Latin 1 codepage
+                filename /= U"test-ń.png";
+            }
+
+            SECTION("To Japanese CJK filename .png")
+            {
+                // CJK symbol for Sun, outside of any European language codepage
+                filename /= U"test-日.png";
+            }
+
+            SECTION("To emoji non-BMP Unicode filename .png")
+            {
+                // snail emoji, outside of Unicode Basic Multilingual Plane
+                filename /= U"test-🐌.png";
             }
 
             // Cannot test JPEG encoding due to it triggering UB in stbiw__jpg_writeBits
+
+            REQUIRE(image.saveToFile(filename));
+            REQUIRE(std::filesystem::exists(filename));
 
             const sf::Image loadedImage(filename);
             CHECK(loadedImage.getSize() == sf::Vector2u(256, 256));
@@ -534,6 +591,18 @@ TEST_CASE("[Graphics] sf::Image")
                 CHECK(output[1] == 80);
                 CHECK(output[2] == 78);
                 CHECK(output[3] == 71);
+            }
+
+            SECTION("To qoi")
+            {
+                maybeOutput = image.saveToMemory("qoi");
+                REQUIRE(maybeOutput.has_value());
+                const auto& output = *maybeOutput;
+                REQUIRE(output.size() == 28);
+                CHECK(output[0] == 113);
+                CHECK(output[1] == 111);
+                CHECK(output[2] == 105);
+                CHECK(output[3] == 102);
             }
 
             // Cannot test JPEG encoding due to it triggering UB in stbiw__jpg_writeBits
