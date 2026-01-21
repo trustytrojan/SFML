@@ -31,7 +31,11 @@
 
 #include <SFML/Window/Sensor.hpp>
 
-#if defined(SFML_SYSTEM_WINDOWS)
+#if defined(SFML_SYSTEM_SDL3)
+
+#include <SFML/Window/SDL3/SensorImpl.hpp>
+
+#elif defined(SFML_SYSTEM_WINDOWS)
 
 #include <SFML/Window/Win32/SensorImpl.hpp>
 

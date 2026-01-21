@@ -60,6 +60,14 @@ if(SFML_BUILD_WINDOW)
     if(SFML_OS_LINUX)
         sfml_set_option(SFML_USE_DRM OFF BOOL "ON to use DRM windowing backend")
     endif()
+
+    # add an option for choosing whether to use SDL3 as windowing backend
+    sfml_set_option(SFML_USE_SDL3 OFF BOOL "ON to use SDL3 as windowing backend")
+endif()
+
+if(SFML_USE_SDL3)
+    set(SFML_OS_SDL3 TRUE)
+    add_definitions(-DSFML_SYSTEM_SDL3)
 endif()
 
 # macOS specific options

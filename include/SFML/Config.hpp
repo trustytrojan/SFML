@@ -38,7 +38,11 @@
 // Identify the operating system
 // see https://sourceforge.net/p/predef/wiki/Home/
 ////////////////////////////////////////////////////////////
-#if defined(_WIN32)
+#if defined(SFML_SYSTEM_SDL3)
+
+// SDL3 is used as the platform abstraction layer
+
+#elif defined(_WIN32)
 
 // Windows
 #define SFML_SYSTEM_WINDOWS

@@ -55,7 +55,26 @@ set(SRC
 source_group("" FILES ${SRC})
 
 # add platform specific sources
-if(SFML_OS_WINDOWS)
+if(SFML_OS_SDL3)
+    set(PLATFORM_SRC
+        ${SRCROOT}/SDL3/WindowImplSdl3.hpp
+        ${SRCROOT}/SDL3/WindowImplSdl3.cpp
+        ${SRCROOT}/SDL3/Sdl3Context.hpp
+        ${SRCROOT}/SDL3/Sdl3Context.cpp
+        ${SRCROOT}/SDL3/JoystickImpl.hpp
+        ${SRCROOT}/SDL3/JoystickImpl.cpp
+        ${SRCROOT}/SDL3/ClipboardImpl.hpp
+        ${SRCROOT}/SDL3/ClipboardImpl.cpp
+        ${SRCROOT}/SDL3/CursorImpl.hpp
+        ${SRCROOT}/SDL3/CursorImpl.cpp
+        ${SRCROOT}/SDL3/InputImpl.cpp
+        ${SRCROOT}/SDL3/SensorImpl.hpp
+        ${SRCROOT}/SDL3/SensorImpl.cpp
+        ${SRCROOT}/SDL3/VideoModeImpl.cpp
+        ${SRCROOT}/SDL3/VulkanImpl.cpp
+    )
+    source_group("sdl3" FILES ${PLATFORM_SRC})
+elseif(SFML_OS_WINDOWS)
     set(PLATFORM_SRC
         ${SRCROOT}/Win32/CursorImpl.hpp
         ${SRCROOT}/Win32/CursorImpl.cpp
@@ -270,7 +289,7 @@ sfml_add_library(Window
                  SOURCES ${SRC} ${PLATFORM_SRC}
                  DEPENDENCIES "Dependencies.cmake.in")
 # DRM libraries
-if(SFML_OS_LINUX OR SFML_OS_FREEBSD OR SFML_OS_OPENBSD OR SFML_OS_NETBSD)
+if((SFML_OS_LINUX OR SFML_OS_FREEBSD OR SFML_OS_OPENBSD OR SFML_OS_NETBSD) AND NOT SFML_OS_SDL3)
     if(SFML_USE_DRM)
         find_package(DRM REQUIRED)
         find_package(GBM REQUIRED)
@@ -320,7 +339,10 @@ if(SFML_OS_WINDOWS AND NOT SFML_COMPILER_MSVC)
     endif()
 endif()
 
-if(SFML_OS_LINUX)
+if(SFML_OS_SDL3)
+    find_package(SDL3 REQUIRED CONFIG)
+    target_link_libraries(sfml-window PRIVATE SDL3::SDL3)
+elseif(SFML_OS_LINUX)
     find_package(UDev REQUIRED)
     target_link_libraries(sfml-window PRIVATE UDev::UDev dl)
 elseif(SFML_OS_WINDOWS)

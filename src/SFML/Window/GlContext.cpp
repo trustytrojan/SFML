@@ -51,7 +51,12 @@
 #include <cstring>
 
 
-#if defined(SFML_SYSTEM_WINDOWS)
+#if defined(SFML_SYSTEM_SDL3)
+
+#include <SFML/Window/SDL3/Sdl3Context.hpp>
+using ContextType = sf::priv::Sdl3Context;
+
+#elif defined(SFML_SYSTEM_WINDOWS)
 
 #if defined(SFML_OPENGL_ES)
 
@@ -490,7 +495,8 @@ void GlContext::unregisterUnsharedGlObject(std::shared_ptr<void> object)
         // in unshared objects should be the only one existing
         const auto iter = std::find_if(unsharedGlObjects->begin(),
                                        unsharedGlObjects->end(),
-                                       [&object](const Impl::UnsharedGlObject& obj) {
+                                       [&object](const Impl::UnsharedGlObject& obj)
+                                       {
                                            return (obj.object == object) &&
                                                   (obj.contextId == GlContextImpl::CurrentContext::get().id);
                                        });

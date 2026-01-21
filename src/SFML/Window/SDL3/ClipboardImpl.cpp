@@ -22,28 +22,36 @@
 //
 ////////////////////////////////////////////////////////////
 
-#pragma once
-
 ////////////////////////////////////////////////////////////
 // Headers
 ////////////////////////////////////////////////////////////
-#include <SFML/Config.hpp>
+#include <SFML/Window/SDL3/ClipboardImpl.hpp>
 
-#if defined(SFML_SYSTEM_SDL3)
-#include <SFML/Window/SDL3/CursorImpl.hpp>
-#elif defined(SFML_SYSTEM_WINDOWS)
-#include <SFML/Window/Win32/CursorImpl.hpp>
-#elif defined(SFML_SYSTEM_LINUX) || defined(SFML_SYSTEM_FREEBSD) || defined(SFML_SYSTEM_OPENBSD) || \
-    defined(SFML_SYSTEM_NETBSD)
-#if defined(SFML_USE_DRM)
-#include <SFML/Window/DRM/CursorImpl.hpp>
-#else
-#include <SFML/Window/Unix/CursorImpl.hpp>
-#endif
-#elif defined(SFML_SYSTEM_MACOS)
-#include <SFML/Window/macOS/CursorImpl.hpp>
-#elif defined(SFML_SYSTEM_IOS)
-#include <SFML/Window/iOS/CursorImpl.hpp>
-#elif defined(SFML_SYSTEM_ANDROID)
-#include <SFML/Window/Android/CursorImpl.hpp>
-#endif
+#include <SDL3/SDL.h>
+
+#include <cstring>
+
+namespace sf::priv
+{
+////////////////////////////////////////////////////////////
+String ClipboardImpl::getString()
+{
+    char* text = SDL_GetClipboardText();
+    if (text)
+    {
+        String s = String::fromUtf8(text, text + std::strlen(text));
+        SDL_free(text);
+        return s;
+    }
+    return {};
+}
+
+
+////////////////////////////////////////////////////////////
+void ClipboardImpl::setString(const String& text)
+{
+    U8String utf8 = text.toUtf8();
+    SDL_SetClipboardText(reinterpret_cast<const char*>(utf8.c_str()));
+}
+
+} // namespace sf::priv

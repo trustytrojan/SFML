@@ -27,23 +27,32 @@
 ////////////////////////////////////////////////////////////
 // Headers
 ////////////////////////////////////////////////////////////
-#include <SFML/Config.hpp>
+#include <SFML/System/String.hpp>
 
-#if defined(SFML_SYSTEM_SDL3)
-#include <SFML/Window/SDL3/CursorImpl.hpp>
-#elif defined(SFML_SYSTEM_WINDOWS)
-#include <SFML/Window/Win32/CursorImpl.hpp>
-#elif defined(SFML_SYSTEM_LINUX) || defined(SFML_SYSTEM_FREEBSD) || defined(SFML_SYSTEM_OPENBSD) || \
-    defined(SFML_SYSTEM_NETBSD)
-#if defined(SFML_USE_DRM)
-#include <SFML/Window/DRM/CursorImpl.hpp>
-#else
-#include <SFML/Window/Unix/CursorImpl.hpp>
-#endif
-#elif defined(SFML_SYSTEM_MACOS)
-#include <SFML/Window/macOS/CursorImpl.hpp>
-#elif defined(SFML_SYSTEM_IOS)
-#include <SFML/Window/iOS/CursorImpl.hpp>
-#elif defined(SFML_SYSTEM_ANDROID)
-#include <SFML/Window/Android/CursorImpl.hpp>
-#endif
+namespace sf::priv
+{
+////////////////////////////////////////////////////////////
+/// \brief SDL3 implementation of the clipboard
+///
+////////////////////////////////////////////////////////////
+class ClipboardImpl
+{
+public:
+    ////////////////////////////////////////////////////////////
+    /// \brief Get the content of the clipboard as Unicode string
+    ///
+    /// \return Current content of the clipboard
+    ///
+    ////////////////////////////////////////////////////////////
+    static String getString();
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Set the content of the clipboard as Unicode string
+    ///
+    /// \param text Content of the clipboard
+    ///
+    ////////////////////////////////////////////////////////////
+    static void setString(const String& text);
+};
+
+} // namespace sf::priv

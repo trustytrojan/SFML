@@ -42,7 +42,14 @@
 
 #include <cmath>
 
-#if defined(SFML_SYSTEM_WINDOWS)
+#if defined(SFML_SYSTEM_SDL3)
+
+#include <SFML/Window/SDL3/WindowImplSdl3.hpp>
+using WindowImplType = sf::priv::WindowImplSdl3;
+
+#include <SFML/Window/VulkanImpl.hpp>
+
+#elif defined(SFML_SYSTEM_WINDOWS)
 
 #include <SFML/Window/Win32/WindowImplWin32.hpp>
 using WindowImplType = sf::priv::WindowImplWin32;

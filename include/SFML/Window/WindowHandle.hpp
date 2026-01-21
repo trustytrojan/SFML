@@ -32,6 +32,8 @@
 // Windows' HWND is a type alias for struct HWND__*
 #if defined(SFML_SYSTEM_WINDOWS)
 struct HWND__; // NOLINT(bugprone-reserved-identifier)
+#elif defined(SFML_SYSTEM_SDL3)
+struct SDL_Window;
 #endif
 
 namespace sf
@@ -40,6 +42,11 @@ namespace sf
 
 // Window handle is HWND (HWND__*) on Windows
 using WindowHandle = HWND__*;
+
+#elif defined(SFML_SYSTEM_SDL3)
+
+// Window handle is SDL_Window* on SDL3
+using WindowHandle = SDL_Window*;
 
 #elif defined(SFML_SYSTEM_LINUX) || defined(SFML_SYSTEM_FREEBSD) || defined(SFML_SYSTEM_OPENBSD) || \
     defined(SFML_SYSTEM_NETBSD)
