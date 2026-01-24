@@ -33,6 +33,11 @@
 
 #include <SFML/Window/VideoMode.hpp>
 
+#ifdef SFML_USE_SDL_RENDERER
+    #include <SFML/Graphics/SDL3/RendererBackend.hpp>
+    #include <SDL3/SDL.h>
+#endif
+
 
 namespace sf
 {
@@ -84,6 +89,11 @@ bool RenderWindow::isSrgb() const
 ////////////////////////////////////////////////////////////
 bool RenderWindow::setActive(bool active)
 {
+#ifdef SFML_USE_SDL_RENDERER
+    // SDL_Renderer doesn't use the same context activation model
+    // Just update RenderTarget tracking
+    return RenderTarget::setActive(active);
+#else
     bool result = Window::setActive(active);
 
     // Update RenderTarget tracking
@@ -100,12 +110,27 @@ bool RenderWindow::setActive(bool active)
     }
 
     return result;
+#endif
 }
 
 
 ////////////////////////////////////////////////////////////
 void RenderWindow::onCreate()
 {
+#ifdef SFML_USE_SDL_RENDERER
+    // Create SDL_Renderer for this window
+    SDL_Window* window = static_cast<SDL_Window*>(getNativeHandle());
+    m_rendererBackend = priv::RendererBackend::create(window);
+    
+    if (!m_rendererBackend)
+    {
+        // Failed to create renderer, this is a fatal error
+        return;
+    }
+    
+    // Initialize the render target part
+    RenderTarget::initialize();
+#else
     if (priv::RenderTextureImplFBO::isAvailable())
     {
         // Retrieve the framebuffer ID we have to bind when targeting the window for rendering
@@ -115,6 +140,7 @@ void RenderWindow::onCreate()
 
     // Just initialize the render target part
     RenderTarget::initialize();
+#endif
 }
 
 
@@ -124,5 +150,27 @@ void RenderWindow::onResize()
     // Update the current view (recompute the viewport, which is stored in relative coordinates)
     setView(getView());
 }
+
+
+#ifdef SFML_USE_SDL_RENDERER
+////////////////////////////////////////////////////////////
+void RenderWindow::clear(Color color)
+{
+    if (m_rendererBackend)
+    {
+        m_rendererBackend->clear(color);
+    }
+}
+
+
+////////////////////////////////////////////////////////////  
+void RenderWindow::display()
+{
+    if (m_rendererBackend)
+    {
+        m_rendererBackend->present();
+    }
+}
+#endif
 
 } // namespace sf

@@ -83,14 +83,36 @@ set(RENDER_TEXTURE_SRC
 )
 source_group("render texture" FILES ${RENDER_TEXTURE_SRC})
 
+# SDL3 renderer backend sources
+if(SFML_USE_SDL_RENDERER)
+    set(SDL3_RENDERER_SRC
+        ${SRCROOT}/SDL3/RendererBackend.hpp
+        ${SRCROOT}/SDL3/RendererBackend.cpp
+    )
+    source_group("sdl3 renderer" FILES ${SDL3_RENDERER_SRC})
+endif()
 
 # define the sfml-graphics target
-sfml_add_library(Graphics
-                 SOURCES ${SRC} ${DRAWABLES_SRC} ${RENDER_TEXTURE_SRC}
-                 DEPENDENCIES "Dependencies.cmake.in")
+if(SFML_USE_SDL_RENDERER)
+    sfml_add_library(Graphics
+                     SOURCES ${SRC} ${DRAWABLES_SRC} ${RENDER_TEXTURE_SRC} ${SDL3_RENDERER_SRC}
+                     DEPENDENCIES "Dependencies.cmake.in")
+else()
+    sfml_add_library(Graphics
+                     SOURCES ${SRC} ${DRAWABLES_SRC} ${RENDER_TEXTURE_SRC}
+                     DEPENDENCIES "Dependencies.cmake.in")
+endif()
 
 # setup dependencies
 target_link_libraries(sfml-graphics PUBLIC SFML::Window)
+
+# SDL3 renderer dependencies
+if(SFML_USE_SDL_RENDERER)
+    if(NOT TARGET SDL3::SDL3)
+        message(FATAL_ERROR "SDL3::SDL3 target not found. Make sure SDL3 is properly configured.")
+    endif()
+    target_link_libraries(sfml-graphics PRIVATE SDL3::SDL3)
+endif()
 
 # stb_image sources
 target_include_directories(sfml-graphics SYSTEM PRIVATE "${PROJECT_SOURCE_DIR}/extlibs/headers/stb_image")
