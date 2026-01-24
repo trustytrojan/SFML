@@ -41,11 +41,22 @@
 
 #include <cstdint>
 
+#ifdef SFML_USE_SDL_RENDERER
+    #include <memory>
+#endif
+
 
 namespace sf
 {
 class Image;
 class String;
+
+#ifdef SFML_USE_SDL_RENDERER
+namespace priv
+{
+class RendererBackend;
+}
+#endif
 
 ////////////////////////////////////////////////////////////
 /// \brief Window that can serve as a target for 2D drawing
@@ -178,6 +189,30 @@ public:
     ////////////////////////////////////////////////////////////
     [[nodiscard]] bool setActive(bool active = true) override;
 
+#ifdef SFML_USE_SDL_RENDERER
+    ////////////////////////////////////////////////////////////
+    /// \brief Clear the window with a color (SDL_Renderer override)
+    ///
+    /// \param color Color to clear with
+    ///
+    ////////////////////////////////////////////////////////////
+    void clear(Color color = Color::Black);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Display the rendered content (SDL_Renderer override)
+    ///
+    ////////////////////////////////////////////////////////////
+    using Window::display; // Keep the base class version available
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Get the SDL_Renderer backend (SDL_Renderer only)
+    ///
+    /// \return Pointer to the renderer backend
+    ///
+    ////////////////////////////////////////////////////////////
+    [[nodiscard]] priv::RendererBackend* getRendererBackend() const { return m_rendererBackend.get(); }
+#endif
+
 protected:
     ////////////////////////////////////////////////////////////
     /// \brief Function called after the window has been created
@@ -202,7 +237,11 @@ private:
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
+#ifdef SFML_USE_SDL_RENDERER
+    std::unique_ptr<priv::RendererBackend> m_rendererBackend; //!< SDL_Renderer backend
+#else
     unsigned int m_defaultFrameBuffer{}; //!< Framebuffer to bind when targeting this window
+#endif
 };
 
 } // namespace sf

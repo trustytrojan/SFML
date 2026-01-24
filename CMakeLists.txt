@@ -61,9 +61,21 @@ if(SFML_BUILD_WINDOW)
     sfml_set_option(SFML_USE_SDL3 OFF BOOL "ON to use SDL3 as windowing backend")
 endif()
 
+if(SFML_BUILD_GRAPHICS)
+    # add an option for choosing whether to use SDL3 Renderer as graphics backend
+    sfml_set_option(SFML_USE_SDL_RENDERER OFF BOOL "ON to use SDL3 Renderer as graphics backend (requires SFML_USE_SDL3)")
+endif()
+
 if(SFML_USE_SDL3)
     set(SFML_OS_SDL3 TRUE)
     add_definitions(-DSFML_SYSTEM_SDL3)
+endif()
+
+if(SFML_USE_SDL_RENDERER)
+    if(NOT SFML_USE_SDL3)
+        message(FATAL_ERROR "SFML_USE_SDL_RENDERER requires SFML_USE_SDL3 to be enabled")
+    endif()
+    add_definitions(-DSFML_USE_SDL_RENDERER)
 endif()
 
 # macOS specific options
